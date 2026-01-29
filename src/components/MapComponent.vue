@@ -1,5 +1,5 @@
 <template>
-  <!-- Skip link for keyboard users -->
+  <!-- Skip link for keyboard users to make things accessible -->
   <a class="skip-link" href="#results-heading">Skip to results</a>
 
   <div id="container">
@@ -61,29 +61,31 @@
       <p v-if="isPostalActive && activePostalCenter" class="hint">
         Using center: {{ activePostalLabel }} (offline FSA centroid)
       </p>
+      <p v-if="postalNoResultsNotice" class="hint" role="status" aria-live="polite">
+  {{ postalNoResultsNotice }}
+</p>
 
       <hr />
 
-      <!-- Filters section (moved below search) -->
+      <!-- Filters section -->
       <h3 class="filters-title" style="margin-top: 0;">
         Or filter clinics by:
       </h3>
 
-      <!-- Province dropdown (popover) with checkboxes -->
+      <!-- Province dropdown with checkboxes -->
       <h4 class="subhead">Province / Territory</h4>
 
       <div class="dropdown-wrap" ref="provinceDropdown">
-       
-        <button
-  ref="provinceButton"
-  class="input dropdown-button"
-  type="button"
-  @click="toggleProvinceDropdown"
-  @keydown.escape.prevent="closeProvinceDropdown"
-  :aria-expanded="String(isProvinceDropdownOpen)"
-  aria-controls="province-menu"
->
 
+        <button
+          ref="provinceButton"
+          class="input dropdown-button"
+          type="button"
+          @click="toggleProvinceDropdown"
+          @keydown.escape.prevent="closeProvinceDropdown"
+          :aria-expanded="String(isProvinceDropdownOpen)"
+          aria-controls="province-menu"
+        >
           <span>
             Provinces:
             <span v-if="selectedProvinces.length">{{ selectedProvinces.length }} selected</span>
@@ -92,14 +94,13 @@
           <span class="caret">▾</span>
         </button>
 
-       <div
-  v-if="isProvinceDropdownOpen"
-  id="province-menu"
-  class="dropdown-menu"
-  role="menu"
-  @keydown.escape.prevent="closeProvinceDropdown"
->
-
+        <div
+          v-if="isProvinceDropdownOpen"
+          id="province-menu"
+          class="dropdown-menu"
+          role="menu"
+          @keydown.escape.prevent="closeProvinceDropdown"
+        >
           <label class="check" v-for="prov in provinces" :key="prov">
             <input
               type="checkbox"
@@ -122,17 +123,73 @@
 
       <hr />
 
-      <!-- Population -->
+      <!-- Population dropdown -->
       <h4 class="subhead">Population</h4>
-      <label class="field">
-        <span class="label">Population served</span>
-        <select class="input" v-model="selectedPopulationsProxy">
-          <option value="">Any</option>
-          <option value="adult">Adult</option>
-          <option value="pediatric">Pediatric</option>
-          <option value="both">Both</option>
-        </select>
-      </label>
+
+      <div class="dropdown-wrap" ref="populationDropdown">
+        <button
+          ref="populationButton"
+          class="input dropdown-button"
+          type="button"
+          @click="togglePopulationDropdown"
+          @keydown.escape.prevent="closePopulationDropdown"
+          :disabled="!availablePopulations.length"
+          :aria-expanded="String(isPopulationDropdownOpen)"
+          aria-controls="population-menu"
+        >
+          <span>
+            Populations:
+            <span v-if="selectedPopulations.length">{{ selectedPopulations.length }} selected</span>
+            <span v-else>All</span>
+          </span>
+          <span class="caret">▾</span>
+        </button>
+
+        <div
+          v-if="isPopulationDropdownOpen"
+          id="population-menu"
+          class="dropdown-menu"
+          role="menu"
+          @keydown.escape.prevent="closePopulationDropdown"
+        >
+          <!-- All toggle -->
+          <label class="check">
+            <input
+              type="checkbox"
+              :checked="isAllPopulationsSelected"
+              @change="toggleAllPopulations($event)"
+            />
+            <span><strong>All</strong></span>
+          </label>
+
+          <div v-if="availablePopulations.length">
+            <label class="check" v-for="p in availablePopulations" :key="p">
+              <input
+                type="checkbox"
+                :checked="selectedPopulations.includes(normalizePopulationKey(p))"
+                @change="togglePopulation(p)"
+              />
+              <span>{{ formatPopulationLabel(p) }}</span>
+            </label>
+          </div>
+
+          <p v-else class="hint">No populations found yet.</p>
+
+          <div class="dropdown-actions">
+            <button
+              class="btn secondary smallbtn"
+              type="button"
+              @click="clearPopulationsOnly"
+              :disabled="!selectedPopulations.length"
+            >
+              Clear populations
+            </button>
+            <button class="btn smallbtn" type="button" @click="closePopulationDropdown">
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
 
       <hr />
 
@@ -149,16 +206,15 @@
 
       <div class="dropdown-wrap" ref="servicesDropdown">
         <button
-  ref="servicesButton"
-  class="input dropdown-button"
-  type="button"
-  @click="toggleServicesDropdown"
-  @keydown.escape.prevent="closeServicesDropdown"
-  :disabled="!availableServices.length"
-  :aria-expanded="String(isServicesDropdownOpen)"
-  aria-controls="services-menu"
->
-
+          ref="servicesButton"
+          class="input dropdown-button"
+          type="button"
+          @click="toggleServicesDropdown"
+          @keydown.escape.prevent="closeServicesDropdown"
+          :disabled="!availableServices.length"
+          :aria-expanded="String(isServicesDropdownOpen)"
+          aria-controls="services-menu"
+        >
           <span>
             Services:
             <span v-if="selectedServices.length">{{ selectedServices.length }} selected</span>
@@ -168,13 +224,12 @@
         </button>
 
         <div
-  v-if="isServicesDropdownOpen"
-  id="services-menu"
-  class="dropdown-menu"
-  role="menu"
-  @keydown.escape.prevent="closeServicesDropdown"
->
-
+          v-if="isServicesDropdownOpen"
+          id="services-menu"
+          class="dropdown-menu"
+          role="menu"
+          @keydown.escape.prevent="closeServicesDropdown"
+        >
           <div v-if="availableServices.length">
             <label class="check" v-for="s in availableServices" :key="s">
               <input
@@ -224,13 +279,13 @@
       <h4 class="subhead">Results</h4>
 
       <p class="hint" aria-hidden="true">
-  Showing {{ displayClinics.length }} clinic<span v-if="displayClinics.length !== 1">s</span>
-</p>
+        Showing {{ displayClinics.length }} clinic<span v-if="displayClinics.length !== 1">s</span>
+      </p>
 
-<!-- Screen-reader live region: announces result updates -->
-<div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-  {{ resultsAnnouncement }}
-</div>
+      <!-- Screen-reader live region: announces result updates -->
+      <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {{ resultsAnnouncement }}
+      </div>
     </div>
   </div>
 
@@ -279,14 +334,14 @@
             </div>
 
             <div class="filtered-line button-line">
-  <button class="download-vcard-button" @click="downloadVCard(clinic)">
-    Download Contact
-  </button>
+              <button class="download-vcard-button" @click="downloadVCard(clinic)">
+                Download Contact
+              </button>
 
-  <button class="view-map-button" type="button" @click="viewOnMap(clinic)">
-    View on map
-  </button>
-</div>
+              <button class="view-map-button" type="button" @click="viewOnMap(clinic)">
+                View on map
+              </button>
+            </div>
           </li>
         </ul>
 
@@ -310,26 +365,27 @@ export default {
     return {
       isSmallScreen: false,
 
-            map: null,
+      map: null,
       markerLayer: null,
       searchCircle: null,
 
       // Performance: keep marker instances so we don't rebuild everything on every change
       markersById: new Map(),
 
-
-            // Performance: debounce marker redraws so rapid changes don't rebuild markers repeatedly
+      // Performance: debounce marker redraws so rapid changes don't rebuild markers repeatedly
       debouncedUpdateMapMarkers: null,
 
       // Performance: cache icons so we don't recreate Leaflet icon objects every redraw
       clinicIconCache: {},
-
 
       // Province dropdown open state
       isProvinceDropdownOpen: false,
 
       // Services dropdown open state
       isServicesDropdownOpen: false,
+
+      // ✅ NEW: Population dropdown open state
+      isPopulationDropdownOpen: false,
 
       // Province options (UI labels)
       provinces: [
@@ -369,7 +425,12 @@ export default {
       return this.$store?.getters?.availableServices || [];
     },
 
-        resultsAnnouncement() {
+    // populations list comes from store
+    availablePopulations() {
+      return this.$store?.getters?.availablePopulations || [];
+    },
+
+    resultsAnnouncement() {
       const n = this.displayClinics.length;
       return `Showing ${n} clinic${n === 1 ? '' : 's'}.`;
     },
@@ -396,15 +457,17 @@ export default {
       }
     },
 
-    selectedPopulationsProxy: {
-      get() {
-        const arr = this.$store.state.filters.selectedPopulations || [];
-        return arr.length ? arr[0] : '';
-      },
-      set(val) {
-        if (!val) this.$store.commit('SET_SELECTED_POPULATIONS', []);
-        else this.$store.commit('SET_SELECTED_POPULATIONS', [val]);
-      }
+    selectedPopulations() {
+      return this.$store.state.filters.selectedPopulations || [];
+    },
+
+    // "All" checkbox state for populations
+    isAllPopulationsSelected() {
+      const opts = (this.availablePopulations || []).map((p) => this.normalizePopulationKey(p));
+      if (!opts.length) return false;
+
+      const selected = this.selectedPopulations || [];
+      return selected.length === opts.length;
     },
 
     referralFilter: {
@@ -462,15 +525,31 @@ export default {
 
     isPostalActive() {
       return this.activeSearchMode === 'postal';
-    }
+    },
+  
+    postalNoResultsNotice() {
+  // Making this so it only shows up when a postal search is active AND no results meet the criteria
+  if (!this.isPostalActive) return '';
+  if (!this.activePostalCenter) return '';
+  if (this.isGeocoding) return '';
+  if (this.postalError) return '';
+
+  const n = Array.isArray(this.displayClinics) ? this.displayClinics.length : 0;
+  if (n > 0) return '';
+
+  const km = Number(this.radiusKm || 0);
+  const label = this.activePostalLabel ? this.activePostalLabel : 'your postal code';
+
+  return `No clinics meeting your selected criteria were found within ${km} km of ${label}. Try increasing the search distance or adjusting your filters.`;
+},
+
   },
 
-      watch: {
+  watch: {
     displayClinics() {
       if (this.debouncedUpdateMapMarkers) this.debouncedUpdateMapMarkers();
       else this.updateMapMarkers();
     },
-
 
     activePostalCenter() {
       this.safeMapAction(() => {
@@ -488,46 +567,43 @@ export default {
     this.checkScreenSize();
     window.addEventListener('resize', this.checkScreenSize);
 
-    // click-outside to close province dropdown
+    // click-outside to close dropdowns
     document.addEventListener('click', this.onDocClick);
 
-  this.initMap();
+    this.initMap();
 
     // Performance: create a debounced redraw function once
     this.debouncedUpdateMapMarkers = this.debounce(() => {
       this.updateMapMarkers();
     }, 50);
 
-    // Leaflet: recalc size after layout settles (ensures height matches sidebar)
+    // Leaflet: recalc size after layout settles
     this.$nextTick(() => {
       if (this.map) this.map.invalidateSize(true);
     });
   },
 
   beforeUnmount() {
-  window.removeEventListener('resize', this.checkScreenSize);
-  document.removeEventListener('click', this.onDocClick);
+    window.removeEventListener('resize', this.checkScreenSize);
+    document.removeEventListener('click', this.onDocClick);
 
-  // Cleanup Leaflet resources if component is destroyed/re-mounted
-  try {
-    if (this.map) {
-      this.map.off();               // remove Leaflet event listeners (e.g., zoomend)
-      this.map.remove();            // destroy the map instance
-    }
-  } catch (_) {}
+    try {
+      if (this.map) {
+        this.map.off();
+        this.map.remove();
+      }
+    } catch (_) {}
 
-  this.map = null;
-  this.markerLayer = null;
-  this.searchCircle = null;
-  this.markersById = new Map();
-  this.clinicIconCache = {};
-  this.debouncedUpdateMapMarkers = null;
-},
-
+    this.map = null;
+    this.markerLayer = null;
+    this.searchCircle = null;
+    this.markersById = new Map();
+    this.clinicIconCache = {};
+    this.debouncedUpdateMapMarkers = null;
+  },
 
   methods: {
-        getClinicIconSizeForZoom(z) {
-      // Keep your exact sizing logic, but we map it to buckets for caching
+    getClinicIconSizeForZoom(z) {
       if (z < 5) return 30;
       if (z < 7) return 45;
       if (z < 9) return 55;
@@ -540,9 +616,9 @@ export default {
 
       if (this.clinicIconCache[key]) return this.clinicIconCache[key];
 
-const aspect = 470 /356;
-const w = size;
-const h = Math.round(size *aspect)
+      const aspect = 470 / 356;
+      const w = size;
+      const h = Math.round(size * aspect);
 
       const icon = L.icon({
         iconUrl: clinicIconUrl,
@@ -563,13 +639,73 @@ const h = Math.round(size *aspect)
       };
     },
 
+    // normalize + labels for populations
+    normalizePopulationKey(v) {
+      return String(v ?? '').trim().toLowerCase();
+    },
 
-isReferralRequired(clinic) {
-  const raw = clinic?.referralRequired ?? clinic?.ReferralRequired ?? clinic?.referral ?? '';
-  if (typeof raw === 'boolean') return raw;
-  const s = String(raw).trim().toLowerCase();
-  return ['true', 'yes', 'y', '1', 'required'].includes(s);
-},
+    formatPopulationLabel(v) {
+      const s = String(v ?? '').trim();
+      if (!s) return '';
+      return s.replace(/\b\w/g, (c) => c.toUpperCase());
+    },
+
+    // population dropdown open/close
+    togglePopulationDropdown() {
+      this.isPopulationDropdownOpen = !this.isPopulationDropdownOpen;
+
+      if (this.isPopulationDropdownOpen) {
+        this.focusFirstCheckbox('populationDropdown');
+      }
+    },
+
+    closePopulationDropdown() {
+      this.isPopulationDropdownOpen = false;
+
+      this.$nextTick(() => {
+        const btn = this.$refs.populationButton;
+        if (btn) btn.focus();
+      });
+    },
+
+    clearPopulationsOnly() {
+      this.$store.commit('SET_SELECTED_POPULATIONS', []);
+    },
+
+    toggleAllPopulations(e) {
+      const checked = !!e?.target?.checked;
+      const opts = (this.availablePopulations || []).map((p) => this.normalizePopulationKey(p));
+
+      if (!opts.length) {
+        this.$store.commit('SET_SELECTED_POPULATIONS', []);
+        return;
+      }
+
+      if (checked) {
+        this.$store.commit('SET_SELECTED_POPULATIONS', opts);
+      } else {
+        this.$store.commit('SET_SELECTED_POPULATIONS', []);
+      }
+    },
+
+    togglePopulation(pop) {
+      const key = this.normalizePopulationKey(pop);
+      const current = this.selectedPopulations || [];
+      const next = current.slice();
+      const i = next.indexOf(key);
+
+      if (i >= 0) next.splice(i, 1);
+      else next.push(key);
+
+      this.$store.commit('SET_SELECTED_POPULATIONS', next);
+    },
+
+    isReferralRequired(clinic) {
+      const raw = clinic?.referralRequired ?? clinic?.ReferralRequired ?? clinic?.referral ?? '';
+      if (typeof raw === 'boolean') return raw;
+      const s = String(raw).trim().toLowerCase();
+      return ['true', 'yes', 'y', '1', 'required'].includes(s);
+    },
 
     focusFirstCheckbox(menuRefName) {
       this.$nextTick(() => {
@@ -582,66 +718,64 @@ isReferralRequired(clinic) {
 
     // Close dropdown when clicking outside
     onDocClick(e) {
-      // Close Province dropdown if click outside
       if (this.isProvinceDropdownOpen) {
         const pRoot = this.$refs.provinceDropdown;
-        if (pRoot && !pRoot.contains(e.target)) {
-          this.isProvinceDropdownOpen = false;
-        }
+        if (pRoot && !pRoot.contains(e.target)) this.isProvinceDropdownOpen = false;
       }
 
-      // Close Services dropdown if click outside
       if (this.isServicesDropdownOpen) {
         const sRoot = this.$refs.servicesDropdown;
-        if (sRoot && !sRoot.contains(e.target)) {
-          this.isServicesDropdownOpen = false;
-        }
+        if (sRoot && !sRoot.contains(e.target)) this.isServicesDropdownOpen = false;
+      }
+
+      if (this.isPopulationDropdownOpen) {
+        const popRoot = this.$refs.populationDropdown;
+        if (popRoot && !popRoot.contains(e.target)) this.isPopulationDropdownOpen = false;
       }
     },
 
-   toggleProvinceDropdown() {
-  this.isProvinceDropdownOpen = !this.isProvinceDropdownOpen;
+    toggleProvinceDropdown() {
+      this.isProvinceDropdownOpen = !this.isProvinceDropdownOpen;
 
-  if (this.isProvinceDropdownOpen) {
-    this.focusFirstCheckbox('provinceDropdown');
-  }
-},
+      if (this.isProvinceDropdownOpen) {
+        this.focusFirstCheckbox('provinceDropdown');
+      }
+    },
 
-closeProvinceDropdown() {
-  this.isProvinceDropdownOpen = false;
+    closeProvinceDropdown() {
+      this.isProvinceDropdownOpen = false;
 
-  this.$nextTick(() => {
-    const btn = this.$refs.provinceButton;
-    if (btn) btn.focus();
-  });
-},
+      this.$nextTick(() => {
+        const btn = this.$refs.provinceButton;
+        if (btn) btn.focus();
+      });
+    },
 
     clearProvincesOnly() {
       this.$store.commit('SET_SELECTED_PROVINCES', []);
       this.updateMapView();
     },
 
-   toggleServicesDropdown() {
-  this.isServicesDropdownOpen = !this.isServicesDropdownOpen;
+    toggleServicesDropdown() {
+      this.isServicesDropdownOpen = !this.isServicesDropdownOpen;
 
-  if (this.isServicesDropdownOpen) {
-    this.focusFirstCheckbox('servicesDropdown');
-  }
-},
+      if (this.isServicesDropdownOpen) {
+        this.focusFirstCheckbox('servicesDropdown');
+      }
+    },
 
-closeServicesDropdown() {
-  this.isServicesDropdownOpen = false;
+    closeServicesDropdown() {
+      this.isServicesDropdownOpen = false;
 
-  this.$nextTick(() => {
-    const btn = this.$refs.servicesButton;
-    if (btn) btn.focus();
-  });
-},
+      this.$nextTick(() => {
+        const btn = this.$refs.servicesButton;
+        if (btn) btn.focus();
+      });
+    },
 
     clearServicesOnly() {
       this.$store.commit('SET_SELECTED_SERVICES', []);
     },
-
 
     toggleProvince(prov) {
       const current = this.$store.state.filters.selectedProvinces || [];
@@ -654,12 +788,11 @@ closeServicesDropdown() {
       this.updateMapView();
     },
 
-        normalizeServiceKey(service) {
+    normalizeServiceKey(service) {
       return String(service ?? '').toLowerCase().trim();
     },
 
-
-        toggleService(service) {
+    toggleService(service) {
       const key = this.normalizeServiceKey(service);
       const current = this.$store.state.filters.selectedServices || [];
       const next = current.slice();
@@ -669,13 +802,11 @@ closeServicesDropdown() {
       this.$store.commit('SET_SELECTED_SERVICES', next);
     },
 
-
     clearFilters() {
       this.$store.commit('RESET_FILTERS');
       this.updateMapView();
     },
 
-    // Search button: postal wins; searching clears province only
     async runSearch() {
       this.postalError = '';
 
@@ -809,19 +940,17 @@ closeServicesDropdown() {
       this.map = L.map('map').setView(this.initialView.center, this.getZoomLevel(this.initialView.zoom));
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap contributors © CARTO',
-  subdomains: 'abcd',
-  maxZoom: 20,
-}).addTo(this.map);
-
+        attribution: '© OpenStreetMap contributors © CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20,
+      }).addTo(this.map);
 
       this.markerLayer = L.layerGroup().addTo(this.map);
 
-            this.map.on('zoomend', () => {
+      this.map.on('zoomend', () => {
         if (this.debouncedUpdateMapMarkers) this.debouncedUpdateMapMarkers();
         else this.updateMapMarkers();
       });
-
 
       this.safeMapAction(() => {
         this.updateMapMarkers();
@@ -847,18 +976,6 @@ closeServicesDropdown() {
         this.map.setView(this.initialView.center, this.getZoomLevel(this.initialView.zoom));
       }
     },
-
-    syncSearchCircle() {
-      if (this.isPostalActive && this.activePostalCenter) {
-        this.drawSearchCircleSafe(
-          [this.activePostalCenter.lat, this.activePostalCenter.lng],
-          this.radiusKm
-        );
-      } else {
-        this.removeSearchCircle();
-      }
-    },
-
 
     removeSearchCircle() {
       if (!this.map) return;
@@ -903,7 +1020,6 @@ closeServicesDropdown() {
     },
 
     getClinicId(clinic) {
-      // Prefer a real id; fall back to a deterministic key
       const id = clinic?.id ?? clinic?.ID ?? clinic?._id;
       if (id !== undefined && id !== null && String(id).trim() !== '') return String(id);
 
@@ -914,7 +1030,7 @@ closeServicesDropdown() {
       return `${name}|${lat}|${lng}`;
     },
 
-        buildPopupContent(clinic) {
+    buildPopupContent(clinic) {
       const name = this.displayName(clinic);
       const addr = this.displayAddressLine(clinic);
       const provPostal = this.displayProvincePostal(clinic);
@@ -927,9 +1043,9 @@ closeServicesDropdown() {
           ${addr}<br/>
           ${provPostal}<br/>
           <strong>Telephone:</strong> ${phone}<br/>
-          ${clinic.website ? `<a href="${clinic.website}" target="_blank" rel="noopener">Click here to visit website</a>` : ''}
-          ${Array.isArray(clinic.services) && clinic.services.some(s => String(s).trim()) ? `<div style="height:1px;"></div>` : ''}
+           ${Array.isArray(clinic.services) && clinic.services.some(s => String(s).trim()) ? `<div style="height:1px;"></div>` : ''}
 
+           <span style="font-weight:700;">Services:</span>
           ${(() => {
             const services = Array.isArray(clinic.services) ? clinic.services.filter(Boolean) : [];
             if (!services.length) return '';
@@ -943,46 +1059,50 @@ closeServicesDropdown() {
 
             return `<div style="margin-top:2px; display:grid; grid-template-columns:repeat(3, max-content); justify-content:start; column-gap:5px; row-gap:4px; font-size:12px;">${items}</div>`;
           })()}
+          
 
           ${(() => {
             const raw = clinic?.populationServed ?? clinic?.PopulationServed ?? clinic?.population ?? '';
-            const t = String(raw).toLowerCase().trim();
-            if (!t) return '';
-            let parts=[];
-            if (t==='both') parts=['Adults','Pediatric'];
-            else if (t.includes('adult') && t.includes('pediatric')) parts=['Adults','Pediatric'];
-            else if (t.includes('adult')) parts=['Adults'];
-            else if (t.includes('pediatric')) parts=['Pediatric'];
-            else parts=[raw];
-            return `<div style="margin-top:6px;"><span style="font-weight:700;">Populations served:</span> ${parts.join(' • ')}</div>`;
+            if (!raw) return '';
+
+            let parts = [];
+            if (Array.isArray(raw)) {
+              parts = raw.map(x => String(x).trim()).filter(Boolean);
+            } else {
+              const t = String(raw).trim();
+              if (!t) return '';
+              parts = t.split(/[,/|;]/).map(x => x.trim()).filter(Boolean);
+              if (parts.length === 1 && String(parts[0]).toLowerCase() === 'both') parts = ['Adult', 'Pediatric'];
+            }
+
+            const safeParts = parts.map(p => this.escapeHtmlBasic(this.formatPopulationLabel(p)));
+            return `<div style="margin-top:6px;"><span style="font-weight:700;">Populations Served:</span> ${safeParts.join(' • ')}</div>`;
           })()}
 
           ${this.isReferralRequired(clinic)
             ? `<div style="margin-top:6px;font-size:12px;color:#7A003C;opacity:.85;">Referral required</div>`
-            : ''}
+            : ''}<br/>
 
+          ${clinic.website ? `<a href="${clinic.website}" target="_blank" rel="noopener">Click here to visit website</a>` : ''} <br/>
           <br/>
           <button
-  class="download-vcard-button"
-  style="padding:8px 10px;border-radius:6px;cursor:pointer;background:#09A4AC;color:white;font-weight:800;border:none;"
->
-  Download Contact
-</button>
-
+            class="download-vcard-button"
+            style="padding:8px 10px;border-radius:6px;cursor:pointer;background:#09A4AC;color:white;font-weight:800;border:none;"
+          >
+            Download Contact
+          </button>
         </div>
       `;
 
       return popupContent;
     },
 
-
-        updateMapMarkers() {
+    updateMapMarkers() {
       if (!this.map || !this.markerLayer) return;
 
       const zoom = this.map.getZoom();
       const icon = this.getClinicIconForZoom(zoom);
 
-      // Build a set of clinic ids that should be shown
       const nextIds = new Set();
 
       for (const clinic of this.displayClinics) {
@@ -998,32 +1118,27 @@ closeServicesDropdown() {
 
         const existing = this.markersById.get(id);
 
-        // If marker doesn't exist, create it once
         if (!existing) {
-                    const popupContent = this.buildPopupContent(clinic);
+          const popupContent = this.buildPopupContent(clinic);
           const marker = L.marker([clat, clng], { icon }).addTo(this.markerLayer);
           marker.bindPopup(popupContent);
 
-                    const btn = popupContent.querySelector('.download-vcard-button');
+          const btn = popupContent.querySelector('.download-vcard-button');
           if (btn) btn.onclick = () => this.downloadVCard(clinic);
 
-          // Store marker + last known position so we can update later if needed
           this.markersById.set(id, { marker, lat: clat, lng: clng });
           continue;
         }
 
-        // Marker exists — update position if it changed
         if (existing.lat !== clat || existing.lng !== clng) {
           existing.marker.setLatLng([clat, clng]);
           existing.lat = clat;
           existing.lng = clng;
         }
 
-        // Marker exists — ensure correct icon for current zoom
         existing.marker.setIcon(icon);
       }
 
-      // Remove markers that are no longer in the results
       for (const [id, entry] of this.markersById.entries()) {
         if (!nextIds.has(id)) {
           try {
@@ -1033,19 +1148,17 @@ closeServicesDropdown() {
         }
       }
 
-      // Keep search circle in sync
       if (this.isPostalActive && this.activePostalCenter) {
         this.drawSearchCircleSafe([this.activePostalCenter.lat, this.activePostalCenter.lng], this.radiusKm);
       }
     },
 
-        escapeHtmlBasic(str) {
+    escapeHtmlBasic(str) {
       return String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
     },
-
 
     formatService(service) {
       const s = String(service ?? '').trim();
@@ -1053,26 +1166,21 @@ closeServicesDropdown() {
       return s.replace(/\b\w/g, (c) => c.toUpperCase());
     },
 
-   
-
-            viewOnMap(clinic) {
+    viewOnMap(clinic) {
       if (!this.map) return;
 
-      // Close dropdown popovers if open (nice UX)
       if (this.isProvinceDropdownOpen) this.closeProvinceDropdown();
       if (this.isServicesDropdownOpen) this.closeServicesDropdown();
+      if (this.isPopulationDropdownOpen) this.closePopulationDropdown();
 
-      // Close any currently-open popup
       try { this.map.closePopup(); } catch (_) {}
 
-      // Scroll map into view
       const mapEl = document.getElementById('map');
       if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       const id = this.getClinicId(clinic);
       const entry = this.markersById?.get(id);
 
-      // If marker is present, use it (best case)
       if (entry?.marker) {
         const prevCenter = this.map.getCenter();
         const prevZoom = this.map.getZoom();
@@ -1080,11 +1188,9 @@ closeServicesDropdown() {
         const ll = entry.marker.getLatLng();
         const targetZoom = Math.max(prevZoom, 12);
 
-        // Zoom/pan + open popup
         this.map.setView(ll, targetZoom, { animate: true });
         entry.marker.openPopup();
 
-        // When the popup closes, restore previous view (one-time)
         entry.marker.once('popupclose', () => {
           this.map.setView(prevCenter, prevZoom, { animate: true });
         });
@@ -1092,7 +1198,6 @@ closeServicesDropdown() {
         return;
       }
 
-      // Fallback: if marker isn't currently on map, try using clinic.location (no popup possible)
       const loc = clinic?.location;
       if (Array.isArray(loc) && loc.length === 2) {
         const clat = Number(loc[0]);
@@ -1103,15 +1208,12 @@ closeServicesDropdown() {
 
           this.map.setView([clat, clng], Math.max(prevZoom, 12), { animate: true });
 
-          // Restore previous view if the user clicks anywhere to close any popup that might open later
           this.map.once('popupclose', () => {
             this.map.setView(prevCenter, prevZoom, { animate: true });
           });
         }
       }
     },
-
-
 
     createVCard(clinic) {
       const name = this.displayName(clinic);
@@ -1161,10 +1263,7 @@ END:VCARD`;
   align-items: stretch;
 }
 
-/* Give map a minimum height so Leaflet always has real pixels to render into.
-   Sidebar will grow with content, and the map will stretch to match. */
-
-   /* Skip link (visible on keyboard focus) */
+/* Skip link (visible on keyboard focus) */
 .skip-link {
   position: absolute;
   left: -9999px;
@@ -1225,16 +1324,13 @@ END:VCARD`;
   border: 1px solid #ddd;
   border-radius: 6px;
   background: #fafafa;
-
-  /* IMPORTANT: sidebar grows with content (no spill) */
   height: auto;
 }
-
 
 .results-wrap {
   width: 75%;
   margin-top: 10px;
-  padding-left: 26px;  /* 50 - 24 = 26px (move left ~0.25") */
+  padding-left: 26px;
   box-sizing: border-box;
 }
 
@@ -1245,37 +1341,31 @@ END:VCARD`;
 }
 
 /* Filtered results list styles ONLY (do not affect anything else) */
-/* Container: give the first entry a little breathing room */
 .filtered-clinic-list {
   list-style: none;
-  padding: 8px 0 6px 0;   /* top padding stays; small bottom too */
+  padding: 8px 0 6px 0;
   margin: 0;
   margin-left: 10px;
   display: flex;
   flex-direction: column;
 }
 
-/* Each clinic entry: balanced padding */
 .filtered-clinic-item {
-  padding: 0px 0 12px 0;  /* equal top/bottom padding */
+  padding: 0px 0 12px 0;
 }
 
-/* Left-aligned dotted separator with EQUAL space above & below */
 .filtered-clinic-item:not(:last-child)::after {
   content: "";
   display: block;
-  width: 192px;               /* ~2 inches */
+  width: 192px;
   border-bottom: 1px dotted #c7c7c7;
-  margin: 8px 0;             /* ✅ equal space above AND below */
+  margin: 8px 0;
 }
 
-/* Adds space after the Download Contact button INSIDE each clinic entry */
 .filtered-clinic-item .download-vcard-button {
-  margin-top: 2px;       /* space above button */
-  margin-bottom: 12px;   /* space AFTER button (before the separator) */
+  margin-top: 2px;
+  margin-bottom: 12px;
 
-
-  /* Match View on map button shape/style (but keep separate class for future changes) */
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
@@ -1293,16 +1383,12 @@ END:VCARD`;
   transform: translateY(1px);
 }
 
-
-
-
-
 .filtered-line {
   margin: 5px;
 }
 
 .clinic-name-maroon {
-  color: #7A003C;        /* (2) clinic name maroon */
+  color: #7A003C;
   font-weight: 800;
   margin-bottom: 4px;
 }
@@ -1316,48 +1402,36 @@ END:VCARD`;
   margin-left: 13px;
 }
 
-/* Slight spacing adjustments within each clinic entry */
 .website-line {
-  margin-top: 10px;      /* space after phone/services before website */
+  margin-top: 10px;
   margin-left: 13px;
 }
 
 .website-line a {
   font-size: 15px;
-  
 }
 
 .button-line {
-  margin-top: 10px;      /* space after website before button */
+  margin-top: 10px;
 }
 
-/* Services checklist (4 columns) */
 .clinic-services-grid {
   display: grid;
-
-  /* 4 services per row */
   grid-template-columns: repeat(4, max-content);
-
-  /* keep items packed left */
   justify-content: start;
-
-  /* <=10px between columns, tight rows */
   column-gap: 12px;
   row-gap: 4px;
-
   margin-top: 6px;
 }
-
 
 .clinic-service-item {
   display: flex;
   align-items: flex-start;
-  gap: 4px;      
-  margin-top:2px;    /* checkmark to text */
+  gap: 4px;
+  margin-top: 2px;
   line-height: 1.2;
   font-size: 15px;
 }
-
 
 .clinic-service-check {
   color: #7A003C;
@@ -1367,7 +1441,6 @@ END:VCARD`;
 .clinic-service-text {
   word-break: break-word;
 }
-
 
 .filters-title {
   margin: 0 0 10px 0;
@@ -1439,15 +1512,6 @@ END:VCARD`;
   margin: 4px 0;
 }
 
-.services-box {
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 6px;
-  padding: 8px;
-  max-height: 180px;
-  overflow: auto;
-}
-
 .hint {
   font-size: 12px;
   color: #666;
@@ -1459,19 +1523,7 @@ END:VCARD`;
   font-weight: 700;
 }
 
-.scrollable-container {
-  max-height: 320px;
-  overflow-y: auto;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 8px;
-}
-
-.clinic {
-  font-weight: 800;
-}
-
-/* Province popover dropdown */
+/* Province/Services/Population popover dropdown */
 .dropdown-wrap {
   position: relative;
 }
@@ -1516,7 +1568,14 @@ END:VCARD`;
   border-top: 1px solid #eee;
 }
 
-/* Responsive */
+.scrollable-container {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px;
+}
+
 @media (max-width: 900px) {
   #container {
     flex-direction: column;

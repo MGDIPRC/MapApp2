@@ -27,6 +27,29 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
+// -------------------------
+// Population helpers (auto-generated options + multi-select like services)
+// -------------------------
+function normalizePopulationKey(v) {
+  return String(v ?? '').trim().toLowerCase();
+}
+
+function parsePopulationList(value) {
+  // supports: "A, B" OR "A | B" OR "A / B" OR "A;B"
+  const tokens = Array.isArray(value) ? value : String(value ?? '').split(/[,|;\\/]/);
+  const norm = tokens.map(t => normalizePopulationKey(t)).filter(Boolean);
+  return Array.from(new Set(norm));
+}
+
+function getClinicPopulations(clinic) {
+  // Prefer the normalized array produced by the loader
+  if (Array.isArray(clinic?.populationServed)) return parsePopulationList(clinic.populationServed);
+
+  // Fall back to raw spreadsheet field names if present
+  const raw = clinic?.Population ?? clinic?.population ?? clinic?.PopulationServed ?? clinic?.populationServed ?? '';
+  return parsePopulationList(raw);
+}
+
 const store = createStore({
   state() {
     return {
@@ -40,7 +63,7 @@ const store = createStore({
         selectedProvinces: [],       // array of province values (multi select)
         selectedServices: [],        // array
         serviceMatchMode: 'ANY',     // "ANY" | "ALL"
-        selectedPopulations: [],     // array: ["adult","pediatric","both"]
+        selectedPopulations: [],     // array (dynamic, from spreadsheet)
         referralFilter: 'any',       // "any" | "required" | "notRequired"
       },
 
@@ -54,7 +77,7 @@ const store = createStore({
       },
 
       // =========================
-      // ACTIVE SEARCH (currently applied)
+      // ACTIVE SEARCH 
       // =========================
       searchActive: {
         activeSearchMode: 'none',    // "none" | "name" | "postal"
@@ -92,7 +115,10 @@ const store = createStore({
     },
 
     SET_SELECTED_POPULATIONS(state, populations) {
-      state.filters.selectedPopulations = Array.isArray(populations) ? populations : [];
+      const arr = Array.isArray(populations) ? populations : [];
+      state.filters.selectedPopulations = Array.from(
+        new Set(arr.map(p => normalizePopulationKey(p)).filter(Boolean))
+      );
     },
 
     SET_REFERRAL_FILTER(state, value) {
@@ -208,18 +234,26 @@ const store = createStore({
 
           if (f.serviceMatchMode === 'ALL') {
             // must include every selected service
-            const ok = f.selectedServices.every((s) => clinicServices.includes(String(s).toLowerCase()));
+            const ok = f.selectedServices.every((s) =>
+              clinicServices.includes(String(s).toLowerCase())
+            );
             if (!ok) return false;
           } else {
             // ANY: include at least one
-            const ok = f.selectedServices.some((s) => clinicServices.includes(String(s).toLowerCase()));
+            const ok = f.selectedServices.some((s) =>
+              clinicServices.includes(String(s).toLowerCase())
+            );
             if (!ok) return false;
           }
         }
 
-        // Population
+        // Population (multi-select like services; match ANY)
         if (f.selectedPopulations.length) {
-          if (!f.selectedPopulations.includes(clinic.population)) return false;
+          const clinicPops = getClinicPopulations(clinic);
+          const ok = f.selectedPopulations.some((p) =>
+            clinicPops.includes(normalizePopulationKey(p))
+          );
+          if (!ok) return false;
         }
 
         // Referral filter
@@ -279,6 +313,15 @@ const store = createStore({
       const set = new Set();
       state.clinicsAll.forEach((c) => {
         (c.services || []).forEach((s) => set.add(String(s).toLowerCase()));
+      });
+      return [...set].sort();
+    },
+
+    // Populations (auto generated from spreadsheet data; like services)
+    availablePopulations: (state) => {
+      const set = new Set();
+      state.clinicsAll.forEach((c) => {
+        getClinicPopulations(c).forEach((p) => set.add(p));
       });
       return [...set].sort();
     },
