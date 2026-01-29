@@ -846,15 +846,46 @@ export default {
     async loadFsaCentroids() {
   if (this.fsaCentroidsLoaded) return;
 
-  const url = new URL('canada_fsa_centroids.json', import.meta.env.BASE_URL).toString();
-  const res = await fetch(url);
+  const candidates = [];
 
-  if (!res.ok) {
-    throw new Error(`Missing canada_fsa_centroids.json at ${url}`);
+  try {
+    candidates.push(new URL('canada_fsa_centroids.json', import.meta.env.BASE_URL).toString());
+  } catch (e) {
+    // ignore
   }
 
-  this.fsaCentroids = await res.json();
-  this.fsaCentroidsLoaded = true;
+
+  candidates.push('canada_fsa_centroids.json');
+  candidates.push('./canada_fsa_centroids.json');
+
+
+  try {
+    const baseDir = window.location.href.replace(/[#?].*$/, '').replace(/\/[^/]*$/, '/');
+    candidates.push(new URL('canada_fsa_centroids.json', baseDir).toString());
+  } catch (e) {
+    // ignore
+  }
+
+  let lastErr = null;
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        lastErr = new Error(`HTTP ${res.status} for ${url}`);
+        continue;
+      }
+      this.fsaCentroids = await res.json();
+      this.fsaCentroidsLoaded = true;
+      return;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw new Error(
+    `Missing canada_fsa_centroids.json. Tried: ${candidates.join(', ')}. Last error: ${lastErr?.message || 'unknown'}`
+  );
 },
 
     normalizeCanadianPostal(postal) {
