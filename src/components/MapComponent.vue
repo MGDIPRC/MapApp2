@@ -844,13 +844,18 @@ export default {
     },
 
     async loadFsaCentroids() {
-      if (this.fsaCentroidsLoaded) return;
-     const url = new URL('canada_fsa_centroids.json', import.meta.env.BASE_URL).toString();
-const res = await fetch(url);
-      if (!res.ok) throw new Error('Missing canada_fsa_centroids.json in /public');
-      this.fsaCentroids = await res.json();
-      this.fsaCentroidsLoaded = true;
-    },
+  if (this.fsaCentroidsLoaded) return;
+
+  const url = new URL('canada_fsa_centroids.json', import.meta.env.BASE_URL).toString();
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    throw new Error(`Missing canada_fsa_centroids.json at ${url}`);
+  }
+
+  this.fsaCentroids = await res.json();
+  this.fsaCentroidsLoaded = true;
+},
 
     normalizeCanadianPostal(postal) {
       const p = String(postal || '').toUpperCase().replace(/\s+/g, '').trim();
