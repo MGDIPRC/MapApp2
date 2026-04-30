@@ -1365,16 +1365,10 @@ END:VCARD`;
 }
 
 :deep(.leaflet-popup-content) {
-  width: 260px;
-  max-width: 260px;
+  max-width: 340px;
   white-space: normal;
-  overflow-wrap: break-word;
-  word-break: break-word;
 }
 
-:deep(.leaflet-popup-content-wrapper) {
-  overflow: hidden;
-}
 
 #map {
   width: 75%;
