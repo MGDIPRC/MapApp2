@@ -1082,7 +1082,7 @@ export default {
           <strong>Telephone:</strong> ${phone}<br/>
            ${Array.isArray(clinic.services) && clinic.services.some(s => String(s).trim()) ? `<div style="height:1px;"></div>` : ''}
 
-           <span style="font-weight:700;">Services:</span>
+           <div style="font-weight:700; margin-top:6px;">Services:</div>
           ${(() => {
             const services = Array.isArray(clinic.services) ? clinic.services.filter(Boolean) : [];
             if (!services.length) return '';
