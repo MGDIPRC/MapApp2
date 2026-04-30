@@ -1091,10 +1091,13 @@ export default {
               if (!label) return '';
                 const safe = this.escapeHtmlBasic(label);
 
-              return `<div style="display:flex;gap:4px;align-items:flex-start;line-height:1.2;font-size:12px;"><span style="color:#7A003C;font-weight:800;">✓</span><span>${safe}</span></div>`;
+              return `<div style="display:flex;gap:6px;align-items:flex-start;line-height:1.3;font-size:12px;">
+  <span style="color:#7A003C;font-weight:800;flex-shrink:0;">✓</span>
+  <span style="white-space:normal;word-break:break-word;">${safe}</span>
+</div>`;
             }).join('');
 
-            return `<div style="margin-top:2px; display:grid; grid-template-columns:repeat(3, max-content); justify-content:start; column-gap:5px; row-gap:4px; font-size:12px;">${items}</div>`;
+            return `<div style="margin-top:4px; display:flex; flex-direction:column; gap:4px; max-width:240px; font-size:12px;">${items}</div>`;
           })()}
           
 
