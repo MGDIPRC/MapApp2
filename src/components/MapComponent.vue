@@ -1075,7 +1075,7 @@ export default {
 
       const popupContent = document.createElement('div');
       popupContent.innerHTML = `
-        <div style="max-width: 240px; white-space: normal;">
+        <div style="width: 240px;">
           <b>${name}</b><br/>
           ${addr}<br/>
           ${provPostal}<br/>
@@ -1091,13 +1091,20 @@ export default {
               if (!label) return '';
                 const safe = this.escapeHtmlBasic(label);
 
-              return `<div style="display:flex;gap:6px;align-items:flex-start;line-height:1.3;font-size:12px;">
+              return `<div style="display:flex; gap:6px; align-items:flex-start; line-height:1.3; font-size:12px; max-width:100%;">
   <span style="color:#7A003C;font-weight:800;flex-shrink:0;">✓</span>
-  <span style="white-space:normal;word-break:break-word;">${safe}</span>
+  <span style="flex:1; min-width:0; white-space:normal; overflow-wrap:break-word;">${safe}</span>
 </div>`;
             }).join('');
 
-            return `<div style="margin-top:4px; display:flex; flex-direction:column; gap:4px; max-width:240px; font-size:12px;">${items}</div>`;
+            return `<div style="
+  margin-top:6px;
+  display:block;
+  width:100%;
+  font-size:12px;
+">
+  ${items}
+</div>`;
           })()}
           
 
