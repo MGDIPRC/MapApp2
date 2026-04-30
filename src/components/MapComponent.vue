@@ -1161,7 +1161,9 @@ export default {
         if (!existing) {
           const popupContent = this.buildPopupContent(clinic);
           const marker = L.marker([clat, clng], { icon }).addTo(this.markerLayer);
-          marker.bindPopup(popupContent);
+          marker.bindPopup(popupContent, {
+  maxWidth: 320
+});
 
           const btn = popupContent.querySelector('.download-vcard-button');
           if (btn) btn.onclick = () => this.downloadVCard(clinic);
@@ -1348,6 +1350,11 @@ END:VCARD`;
   color: white;
   font-weight: 800;
   border: none;
+}
+
+.leaflet-popup-content {
+  margin: 8px 10px;
+  line-height: 1.4;
 }
 
 #map {
