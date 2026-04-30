@@ -1075,7 +1075,7 @@ export default {
 
       const popupContent = document.createElement('div');
       popupContent.innerHTML = `
-        <div>
+        <div style="max-width: 240px; white-space: normal;">
           <b>${name}</b><br/>
           ${addr}<br/>
           ${provPostal}<br/>
